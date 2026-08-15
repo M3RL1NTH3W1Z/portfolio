@@ -163,7 +163,7 @@
     ( MERLIN )
 `,
 `
-       .
+        .
        
        / \\
       /   \\
@@ -171,16 +171,16 @@
     ( MERLIN )
 `,
 `
-     . o .
-       ^
+      . o .
+        ^
        / \\
       /   \\
      /_____\\
     ( MERLIN )
 `,
 `
-   ( . o . )
-       ^
+    ( . o . )
+        ^
        / \\
       /   \\
      /_____\\
@@ -203,10 +203,10 @@
 
     // Data Store
     const fileSystem = {
-        "bio.txt": "IDENTITY: MERLIN-4\n------------------\nROLE: 17C Cyber Ops (National Guard)\nORIGIN: USMC Radio Operator / COMSEC Custodian\nGOAL: NSA TAO // Hardware Implants // Deep Signal Theory",
-        "skills.md": "[HARDWARE]\n- Bus Pirate / JTAG Debugging\n- PCB Analysis (KiCad)\n- RF Signals (SDR/GNU Radio)\n\n[CODE]\n- x86 Assembly\n- C / C++\n- Python Automation",
+        "bio.txt": "IDENTITY: MERLIN-4\n------------------\nROLE: 17C Cyber Ops (National Guard)\nORIGIN: USMC Radio Operator / COMSEC Custodian\nGOAL: Finding what usually isn's sought after // testing on what's forgotten.",
+        "skills.md": "[HARDWARE:UNDER DEVELOPMENT]\n- Bus Pirate / JTAG Debugging\n- PCB Analysis (KiCad)\n- RF Signals (SDR/GNU Radio)\n\n[CODE]\n- Python\n- Golang\n- Bash\n\n[CERTIFICATIONS]\n- CompTIA A+\n- CompTIA Net+\n- CompTIA Sec+(701)\n- LPI Linux Essentials\n- ITIL v4 Foundations",
         "projects": "drwx------  cobol-ghost\ndrwx------  hardware-wizard\ndrwx------  signals-comsec\n-rw-r--r--  bare-metal.asm",
-        "contact": "SECURE DROP: merlin@merlinthewiz.sh\nENCRYPTION: PGP Key ID 0xDEADBEEF"
+        "contact": "SECURE DROP: merlin@merlinthewiz.sh"
     };
 
     // Command Parser
@@ -219,7 +219,7 @@
             // 1. Create specific HTML for the user's entered command
             const userLine = document.createElement('div');
             userLine.className = 'output-line';
-            userLine.innerHTML = `<span class="prompt">merlin@wiz-term:~$</span> ${cmdRaw}`;
+            userLine.innerHTML = `<span class="prompt">merlin@merlinthewiz.sh:~$</span> ${cmdRaw}`;
             history.appendChild(userLine);
 
             // 2. Process Response
@@ -229,6 +229,7 @@
                 case 'help':
                     response = `COMMAND LIST:
   <span class="c-warn">ls</span>            List directory contents
+  <span class="c-warn">cd</span>            Change directory (needs work) 
   <span class="c-warn">cat [file]</span>    Read text file (e.g., 'cat bio.txt')
   <span class="c-warn">rf-scan</span>       Simulate signal interception
   <span class="c-warn">clear</span>         Clear terminal screen
@@ -236,7 +237,7 @@
                     break;
                 
                 case 'ls':
-                    response = `<span class="c-blue">bio.txt</span>   <span class="c-blue">skills.md</span>   <span class="c-blue">contact</span>   <span class="c-warn">projects/</span>`;
+                    response = `<span class="c-blue">bio.txt</span>   <span class="c-blue">skills.md</span>   <span class="c-blue">contact</span>   <span class="c-warn">projects.txt</span>`;
                     break;
 
                 case 'cat':
@@ -250,7 +251,7 @@
                     break;
 
                 case 'whoami':
-                    response = "uid=0(root) gid=0(root) groups=0(root),17(cyber)";
+                    response = "root";
                     break;
 
                 case 'clear':
