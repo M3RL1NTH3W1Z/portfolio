@@ -3,277 +3,331 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MERLIN-4 // SECURE TARGET DEPLOYMENT NODE</title>
-//Is this something we like or should we actually make this a shell terminal? 
-<!-- Fonts -->
+<title>MERLIN-4 // SIGNAL STATION</title>
+<!-- VT323 is the standard "Hacker Terminal" font -->
 <link href="https://googleapis.com" rel="stylesheet">
-<link href="https://fonts.cdnfonts.com/css/ocr-a-std" rel="stylesheet">
-
-<!-- Font Awesome -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
 
 <style>
   :root {
-    --fg: #00ff66;
-    --accent: #bb66ff;     /* Wizard Purple */
-    --signal: #00ffff;     /* Signal RF Blue */
-    --warn: #ffaa00;       /* COMSEC Amber */
-    --alert: #ff3333;      /* Redacted Red */
-    --bg: #050505;
+    --bg-color: #050505;
+    --term-green: #33ff00; /* Classic phosphor green */
+    --term-blue: #00e5ff;  /* Signal blue */
+    --term-warn: #ffaa00;  /* COMSEC amber */
+    --term-glow: 0 0 10px rgba(51, 255, 0, 0.4);
   }
 
   body {
-    background-color: var(--bg);
-    color: var(--fg);
-    font-family: 'Roboto Mono', monospace;
-    letter-spacing: 0.05em;
+    background-color: var(--bg-color);
+    color: var(--term-green);
+    font-family: 'VT323', monospace;
+    font-size: 22px;
     margin: 0;
-    padding: 0;
+    padding: 20px;
     height: 100vh;
-    overflow: hidden;
-    position: relative;
+    overflow: hidden; /* We scroll the terminal div, not the body */
+    text-shadow: var(--term-glow);
   }
 
-  /* Scanline overlay effect */
-  body::before {
-    content: " ";
-    display: block;
+  /* CRT SCREEN EFFECTS */
+  .scanline {
     position: fixed;
-    top: 0; left: 0; bottom: 0; right: 0;
-    background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.3) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
-    z-index: 9999;
-    background-size: 100% 4px, 6px 100%;
+    top: 0; left: 0; width: 100vw; height: 100vh;
+    background: linear-gradient(rgba(18,16,16,0) 50%, rgba(0,0,0,0.25) 50%), 
+                linear-gradient(90deg, rgba(255,0,0,0.06), rgba(0,255,0,0.02), rgba(0,0,255,0.06));
+    background-size: 100% 3px, 3px 100%;
     pointer-events: none;
+    z-index: 10;
   }
-
-  /* Vignette dark edges */
-  body::after {
-    content: " ";
-    display: block;
+  
+  .flicker-overlay {
     position: fixed;
-    top: 0; left: 0; bottom: 0; right: 0;
-    background: radial-gradient(circle, rgba(0,0,0,0) 50%, rgba(0,0,0,0.8) 100%);
-    z-index: 10000;
+    top: 0; left: 0; width: 100vw; height: 100vh;
+    background: rgba(18, 16, 16, 0.1);
+    opacity: 0;
+    z-index: 10;
     pointer-events: none;
+    animation: flicker 0.15s infinite;
   }
 
+  /* TERMINAL CONTAINER */
   #terminal {
-    padding: 30px;
-    height: calc(100vh - 60px);
-    overflow-y: auto;
-    box-sizing: border-box;
-    scroll-behavior: smooth;
+    max-width: 1000px;
+    margin: 0 auto;
+    height: 100%;
+    overflow-y: auto; /* Scrollbar logic */
+    scrollbar-width: none; /* Firefox hide */
+  }
+  #terminal::-webkit-scrollbar { display: none; /* Chrome hide */ }
+
+  /* ASCII ART & TEXT */
+  pre {
+    margin: 0;
+    font-family: inherit;
+    white-space: pre-wrap; /* Mobile wrapping */
+    line-height: 1.1;
   }
 
-  /* Custom terminal scrollbar */
-  #terminal::-webkit-scrollbar {
-    width: 8px;
-  }
-  #terminal::-webkit-scrollbar-track {
-    background: rgba(0, 0, 0, 0.3);
-  }
-  #terminal::-webkit-scrollbar-thumb {
-    background: rgba(0, 255, 102, 0.2);
-    border-radius: 4px;
-  }
-  #terminal::-webkit-scrollbar-thumb:hover {
-    background: rgba(0, 255, 102, 0.4);
+  #banner {
+    color: var(--term-blue);
+    font-weight: bold;
+    margin-bottom: 20px;
+    white-space: pre; /* Force strict ASCII spacing */
   }
 
-  .prompt-wrapper {
+  .output-line {
+    margin-bottom: 5px;
+    word-wrap: break-word;
+  }
+
+  /* INPUT LINE STYLING */
+  .input-wrapper {
     display: flex;
     align-items: center;
-    margin-top: 15px;
+    margin-top: 10px;
   }
 
   .prompt {
-    color: var(--accent);
-    font-weight: bold;
-    white-space: nowrap;
-    margin-right: 12px;
-  }
-
-  .input-area {
-    display: flex;
-    flex-grow: 1;
-    position: relative;
-  }
-
-  input {
-    background: none;
-    border: none;
-    color: var(--fg);
-    font-family: inherit;
-    font-size: 1em;
-    width: 100%;
-    outline: none;
-    caret-color: var(--fg);
-  }
-
-  ::selection {
-    background: var(--fg);
-    color: #000;
-  }
-
-  a {
-    color: var(--signal);
-    text-decoration: none;
-    font-weight: bold;
-  }
-  a:hover {
-    text-decoration: underline;
-    text-shadow: 0 0 8px var(--signal);
-  }
-
-  .banner {
-    margin-bottom: 1.5em;
-  }
-
-  .banner-ascii {
-    white-space: pre;
-    font-family: 'Roboto Mono', monospace;
-    font-size: 0.75vw;
-    line-height: 1.2;
-    color: var(--fg);
-    text-shadow: 0 0 5px rgba(0, 255, 102, 0.5);
-  }
-
-  .banner-ocr {
-    display: none;
-    font-family: 'OCR A Std', monospace;
-    font-size: 1.5em;
-    letter-spacing: 0.05em;
-    line-height: 1.3em;
-  }
-
-  @media (max-width: 900px) {
-    .banner-ascii { font-size: 1.1vw; }
-  }
-
-  @media (max-width: 700px) {
-    .banner-ascii { display: none; }
-    .banner-ocr { display: block; }
-    body { font-size: 0.9em; }
-    #terminal { padding: 15px; }
-  }
-
-  .history-block {
-    margin-bottom: 12px;
-  }
-
-  .typed-line {
-    white-space: pre-wrap;
-    line-height: 1.5;
-    margin-top: 6px;
-  }
-
-  i {
+    color: var(--term-green);
     margin-right: 8px;
+    white-space: nowrap;
   }
 
-  /* Color System Utility Classes */
-  .c-wiz { color: var(--accent); }
-  .c-sig { color: var(--signal); }
-  .c-warn { color: var(--warn); }
-  .c-alert { color: var(--alert); }
-  .bold { font-weight: bold; }
-
-  /* Interactive Animations */
-  @keyframes blink-effect {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0; }
+  /* The actual input is transparent but sits on top of the text area */
+  #cmd-input {
+    background: transparent;
+    border: none;
+    color: var(--term-green);
+    font-family: 'VT323', monospace;
+    font-size: 22px;
+    flex-grow: 1;
+    outline: none;
+    text-shadow: var(--term-glow);
+    caret-color: var(--term-green); /* The blinking cursor block */
+    text-transform: lowercase;
   }
-  .blink { animation: blink-effect 1s infinite; }
 
-  .banner-subtext {
-    font-family: 'Roboto Mono', monospace;
-    font-size: 0.9em;
-    color: var(--warn);
-    margin-top: 10px;
-    display: block;
+  /* UTILITY COLORS */
+  .c-blue { color: var(--term-blue); text-shadow: 0 0 8px rgba(0, 229, 255, 0.6); }
+  .c-warn { color: var(--term-warn); }
+  .c-white { color: #fff; }
+  .c-dim { color: #555; }
+
+  @keyframes flicker {
+    0% { opacity: 0.02; }
+    50% { opacity: 0.05; }
+    100% { opacity: 0.02; }
   }
 </style>
 </head>
 <body>
+
+<!-- VISUAL OVERLAYS -->
+<div class="scanline"></div>
+<div class="flicker-overlay"></div>
+
+<!-- MAIN TERMINAL AREA -->
 <div id="terminal">
-  <div class="banner banner-ascii" id="banner-ascii">
- ███▄    █  ▒█████  ▓█████▄ ▓█████     ███▄ ▄███▓ ▄▄▄        ▄████  ██▓ ▄████▄   ██▀███  
- ██ ▀█   █ ▒██▒  ██▒▒██▀ ██▌▓█   ▀    ▓██▒▀█▀ ██▒▒████▄     ██▒ ▀█▒▓██▒▒██▀ ▀█  ▓██ ▒ ██▒
-▓██  ▀█ ___▒██░  ██▒░██   █▌▒███      ▓██    ▓██░▒██  ▀█▄  ▒██░ ▄▄▄▒██▒▒▓█    ▄ ▓██ ░▄█ ▒
-▓██▒  ▐▌██▒▒██   ██░░▓█▄   ▌▒▓█  ▄    ▒██    ▒██ ░██▄▄▄▄██ ░▓█  ██▓░██░▒▓▓▄ ▄██▒▒██▀▀█▄  
-▒██░   ▓██░░ ████▓▒░░▒████▓ ░▒████▒   ▒██▒   ░██▒ ▓█   ▓██▒░▒████▒▒░██░▒ ▓███▀ ░░██▓ ▒██▒
-░ ▒░   ▒ ▒ ░ ▒░▒░▒░  ▒▒▓  ▒ ░░ ▒░ ░   ░ ▒░   ░  ░ ▒▒   ▓▒█░ ░▒ ▓  ░░▓  ░ ░▒ ▒  ░░ ▒▓ ░▒▓░
-░ ░░   ░ ▒░  ░ ▒ ▒░  ░ ▒  ▒  ░ ░  ░   ░  ░      ░  ▒   ▒▒ ░  ░ ░  ░ ▒ ░  ░  ▒     ░▒ ░ ▒░
-   ░   ░ ░ ░ ░ ░ ▒   ░ ░  ░    ░      ░      ░     ░   ▒   ░   ░  ░ ▒ ░░         ░░   ░ 
-         ░     ░ ░     ░       ░  ░          ░         ░  ░      ░  ░  ░ ░            ░ 
-                     ░                                             ░   ░ ░            
-  <span class="banner-subtext">STAGING NODE // HOST: <span class="c-sig">merlinthewiz.sh</span> // PROTOCOL: <span class="c-wiz">WIZARD_HAT_ACTIVE</span></span>
-  <span class="banner-subtext" style="color:var(--fg);">Type <span class="c-warn bold">help</span> to begin cryptographic audit sequence.</span>
-  </div>
+    <!-- ASCII ART ANIMATION CONTAINER -->
+    <pre id="banner"></pre>
+    
+    <div class="output-line">MERLIN-4 [Version 17C.GUARD.4.0]</div>
+    <div class="output-line c-dim">Connected to secure node: merlinthewiz.sh</div>
+    <div class="output-line c-dim">Type <span class="c-warn">'help'</span> to initialize connection protocols.</div>
+    <br>
 
-  <div class="banner banner-banner-ocr banner-ocr" id="banner-ocr">
-    MERLIN-4 // SECURE TTY<br>
-    <span class="banner-subtext">Type <span class="c-warn bold">help</span> to initialize stack.</span>
-  </div>
+    <!-- COMMAND HISTORY -->
+    <div id="history"></div>
 
-  <div id="output-history"></div>
-
-  <div class="prompt-wrapper">
-    <span class="prompt">merlin@merlinthewiz.sh:~$</span>
-    <div class="input-area">
-      <input id="commandInput" autofocus autocomplete="off" spellcheck="false" />
+    <!-- ACTIVE INPUT LINE -->
+    <div class="input-wrapper">
+        <span class="prompt">merlin@wiz-term:~$</span>
+        <input type="text" id="cmd-input" autocomplete="off" spellcheck="false" autofocus>
     </div>
-  </div>
 </div>
 
 <script>
-const terminal = document.getElementById('terminal');
-const input = document.getElementById('commandInput');
-const historyContainer = document.getElementById('output-history');
+    /* --- 1. THE SIGNAL ANIMATION ENGINE --- */
+    const bannerEl = document.getElementById('banner');
+    
+    // Frame 0: Quiet
+    // Frame 1: Low Signal
+    // Frame 2: Mid Signal
+    // Frame 3: High Signal
+    const frames = [
+`
+       
+       
+       / \\
+      /   \\
+     /_____\\
+    ( MERLIN )
+`,
+`
+       .
+       
+       / \\
+      /   \\
+     /_____\\
+    ( MERLIN )
+`,
+`
+     . o .
+       ^
+       / \\
+      /   \\
+     /_____\\
+    ( MERLIN )
+`,
+`
+   ( . o . )
+       ^
+       / \\
+      /   \\
+     /_____\\
+    ( MERLIN )
+`
+    ];
 
-const bannerAsciiHTML = document.getElementById('banner-ascii').innerHTML;
-const bannerOcrHTML = document.getElementById('banner-ocr').innerHTML;
+    let frameIndex = 0;
+    // Animate at 250ms for that retro "refresh rate" feel
+    setInterval(() => {
+        bannerEl.textContent = frames[frameIndex];
+        frameIndex = (frameIndex + 1) % frames.length;
+    }, 250);
 
-const commands = {
-  help: `<span class="c-wiz bold">[AVAILABLE MATRIX PROTOCOLS]</span>
-  <span class="c-sig bold">help</span>           - View this cryptographic command index map
-  <span class="c-sig bold">bio</span>            - Extract operational Marine Corps & 17C Guard dossier
-  <span class="c-sig bold">spellbook</span>      - Audit low-level deep-tech repository pipelines
-  <span class="c-sig bold">roadmap</span>        - View long-term academic & operational research targets
-  <span class="c-sig bold">cat [target]</span>   - Read raw contents of a specific project ledger manifest
-  <span class="c-sig bold">pirate-sniff</span>   - Execute active RF signal telemetry scanner sequence
-  <span class="c-sig bold">sudo tao</span>       - Request restricted Tailored Access Operations terminal override
-  <span class="c-sig bold">clear</span>          - Flush active display buffer matrices`,
 
-  bio: `<span class="c-wiz bold">[IDENTITY REGISTER]</span>
-  <span class="bold">Callsign:</span>      MERLIN-4 (Mad Scientist Class // E-4 Rank Framework)
-  <span class="bold">Service:</span>       4 Years USMC Active Duty // Radio Operator & COMSEC Custodian
-  <span class="bold">Current Post:</span>  17C Cyber Operations Specialist // Army National Guard
-  <span class="bold">Objective:</span>     Deep-Tech Research & Exploitation Frameworks // Target: NSA TAO
-  
-  <span class="c-warn bold">[TACTICAL OVERVIEW]</span>
-  Tasked throughout active service with engineering forgotten infrastructure stacks, 
-  rebuilding dead frequencies, and assembling tactical networks the units needed 
-  but didn't understand how to instantiate. Currently deploying hardware implants, 
-  reverse engineering logic boards, and mastering legacy architectures.`,
+    /* --- 2. TERMINAL LOGIC --- */
+    const terminal = document.getElementById('terminal');
+    const input = document.getElementById('cmd-input');
+    const history = document.getElementById('history');
 
-  spellbook: `<span class="c-wiz bold">[PROJECT MANIFEST INDEX]</span>
-  Use <span class="c-warn bold">cat [repo-name]</span> to inspect project configurations.
+    // Data Store
+    const fileSystem = {
+        "bio.txt": "IDENTITY: MERLIN-4\n------------------\nROLE: 17C Cyber Ops (National Guard)\nORIGIN: USMC Radio Operator / COMSEC Custodian\nGOAL: NSA TAO // Hardware Implants // Deep Signal Theory",
+        "skills.md": "[HARDWARE]\n- Bus Pirate / JTAG Debugging\n- PCB Analysis (KiCad)\n- RF Signals (SDR/GNU Radio)\n\n[CODE]\n- x86 Assembly\n- C / C++\n- Python Automation",
+        "projects": "drwx------  cobol-ghost\ndrwx------  hardware-wizard\ndrwx------  signals-comsec\n-rw-r--r--  bare-metal.asm",
+        "contact": "SECURE DROP: merlin@merlinthewiz.sh\nENCRYPTION: PGP Key ID 0xDEADBEEF"
+    };
 
-  <i class="fa-solid fa-ghost c-sig"></i> <span class="bold">cobol-ghost</span>       - Mainframe memory isolation, fuzzing maps, and legacy targets.
-  <i class="fa-solid fa-microchip c-sig"></i> <span class="bold">hardware-wizard</span>   - Motherboard layer reverse engineering, trace mappings, SPI flash dumps.
-  <i class="fa-solid fa-tower-cell c-sig"></i> <span class="bold">signals-comsec</span>    - GNU Radio Companion (.grc) flowgraphs, RF interception scripts.
-  <i class="fa-solid fa-terminal c-sig"></i> <span class="bold">bare-metal-nec</span>    - Pure x86/ARM Assembly scripts, custom drivers, evasion engines.`,
+    // Command Parser
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            const cmdRaw = input.value;
+            const cmd = cmdRaw.trim().toLowerCase();
+            const args = cmd.split(' ');
 
-  roadmap: `<span class="c-wiz bold">[ACADEMIC & CRITICAL MISSION TARGETS]</span>
-  
-  <span class="bold">[PHASE 1]</span> <span class="c-sig">🟩 ACTIVE</span>  - Complete 17C Operations AIT // Validate WGU BSCIA Fundamentals.
-  <span class="bold">[PHASE 2]</span> <span class="c-warn">🟨 STAGED</span>  - WGU MSCIA Matrix Integration // JTAG & Logic Analyzer Mastery.
-  <span class="bold">[PHASE 3]</span> <span class="c-warn">🟨 QUEUED</span>  - M.S. Electrical Engineering (Focus: Component Interdiction / Motherboard Logic).
-  <span class="bold">[PHASE 4]</span> <span class="c-alert">🟥 TARGET</span>  - Doctorate in Cybersecurity // Pipeline directly into NSA TAO / CNODP.`,
+            // 1. Create specific HTML for the user's entered command
+            const userLine = document.createElement('div');
+            userLine.className = 'output-line';
+            userLine.innerHTML = `<span class="prompt">merlin@wiz-term:~$</span> ${cmdRaw}`;
+            history.appendChild(userLine);
 
-  "cobol-ghost": `<span class="c-alert bold">[MANIFEST: cobol-ghost]</span>
-  Architecture sandbox focusing on legacy financial and defense application fuzzing.
-  Features a fully containerized Hercules Mainframe emulator ecosystem designed to safely 
-  test buffer layout limits on archaic transaction layers. Memory mappings written in pure C.`,
+            // 2. Process Response
+            let response = "";
+            
+            switch (args[0]) {
+                case 'help':
+                    response = `COMMAND LIST:
+  <span class="c-warn">ls</span>            List directory contents
+  <span class="c-warn">cat [file]</span>    Read text file (e.g., 'cat bio.txt')
+  <span class="c-warn">rf-scan</span>       Simulate signal interception
+  <span class="c-warn">clear</span>         Clear terminal screen
+  <span class="c-warn">whoami</span>        Print user identity`;
+                    break;
+                
+                case 'ls':
+                    response = `<span class="c-blue">bio.txt</span>   <span class="c-blue">skills.md</span>   <span class="c-blue">contact</span>   <span class="c-warn">projects/</span>`;
+                    break;
 
+                case 'cat':
+                    if (fileSystem[args[1]]) {
+                        response = fileSystem[args[1]];
+                    } else if (!args[1]) {
+                        response = "Usage: cat [filename] (hint: try 'cat bio.txt')";
+                    } else {
+                        response = `<span class="c-warn">Error: File '${args[1]}' not found.</span>`;
+                    }
+                    break;
+
+                case 'whoami':
+                    response = "uid=0(root) gid=0(root) groups=0(root),17(cyber)";
+                    break;
+
+                case 'clear':
+                    history.innerHTML = "";
+                    break;
+                
+                case 'rf-scan':
+                    startRfScan(); 
+                    // rf-scan handles its own async output, so we don't set response immediately
+                    break;
+
+                case '':
+                    break;
+
+                default:
+                    response = `bash: ${args[0]}: command not found`;
+            }
+
+            // 3. Append Response (if valid)
+            if (response && args[0] !== 'clear') {
+                const respLine = document.createElement('div');
+                respLine.className = 'output-line';
+                respLine.innerHTML = response;
+                history.appendChild(respLine);
+            }
+
+            // 4. Reset & Scroll
+            input.value = '';
+            terminal.scrollTop = terminal.scrollHeight;
+        }
+    });
+
+    /* --- 3. SIMULATED RF SCANNER FUNCTION --- */
+    function startRfScan() {
+        const id = Math.floor(Math.random() * 1000);
+        let count = 0;
+        
+        // Disable input during scan
+        input.disabled = true;
+        
+        const interval = setInterval(() => {
+            const freq = (Math.random() * 800).toFixed(2);
+            const db = -(Math.random() * 90).toFixed(1);
+            
+            const line = document.createElement('div');
+            line.className = 'output-line c-dim';
+            line.innerHTML = `[SDR-RTL] TUNING ${freq}MHz ... SIGNAL: ${db}dBm ... <span class="c-blue">LOCKING</span>`;
+            history.appendChild(line);
+            terminal.scrollTop = terminal.scrollHeight;
+            
+            count++;
+            if (count > 5) {
+                clearInterval(interval);
+                const done = document.createElement('div');
+                done.className = 'output-line c-warn';
+                done.innerText = "SCAN COMPLETE. 0 HANDSHAKES CAPTURED.";
+                history.appendChild(done);
+                terminal.scrollTop = terminal.scrollHeight;
+                
+                // Re-enable input and focus
+                input.disabled = false;
+                input.focus();
+            }
+        }, 200);
+    }
+
+    /* --- 4. FOCUS LOCK (KEEPS KEYBOARD OPEN) --- */
+    document.addEventListener('click', () => {
+        // Only focus if the user isn't selecting text (optional usability tweak)
+        if (window.getSelection().toString() === "") {
+            input.focus();
+        }
+    });
+    
+    // Initial focus
+    input.focus();
+
+</script>
+</body>
+</html>
