@@ -140,7 +140,7 @@
 
     <!-- ACTIVE INPUT LINE -->
     <div class="input-wrapper">
-        <span class="prompt">merlin@wiz-term:~$</span>
+        <span class="prompt">user@merlinthewiz.sh:~$</span>
         <input type="text" id="cmd-input" autocomplete="off" spellcheck="false" autofocus>
     </div>
 </div>
@@ -219,7 +219,7 @@
             // 1. Create specific HTML for the user's entered command
             const userLine = document.createElement('div');
             userLine.className = 'output-line';
-            userLine.innerHTML = `<span class="prompt">merlin@merlinthewiz.sh:~$</span> ${cmdRaw}`;
+            userLine.innerHTML = `<span class="prompt">user@merlinthewiz.sh:~$</span> ${cmdRaw}`;
             history.appendChild(userLine);
 
             // 2. Process Response
@@ -251,7 +251,7 @@
                     break;
 
                 case 'whoami':
-                    response = "root";
+                    response = "user";
                     break;
 
                 case 'clear':
